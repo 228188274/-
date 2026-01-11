@@ -4,6 +4,9 @@
 
 ## 文档
 - **需求说明（PRD/SRS）**：`docs/requirements.md`
+- **界面与交互（UI/UX Spec）**：`docs/ui-interactions.md`
+- **本地存储与导入导出规范**：`docs/storage-format.md`
+- **AI能力与改动清单规范**：`docs/ai-spec.md`
 
 ## 范围（核心）
 - **开始创作**：左侧章节目录管理 + 右侧编辑器（AI润色/回溯阅读/提交保存）
