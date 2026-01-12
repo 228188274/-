@@ -53,6 +53,7 @@ class ApiKeysTab(QWidget):
         row = QHBoxLayout()
         self.btn_save = QPushButton("保存")
         self.btn_test = QPushButton("测试连通性")
+        self.btn_save.setProperty("variant", "primary")
         row.addWidget(self.btn_save)
         row.addWidget(self.btn_test)
         row.addStretch(1)

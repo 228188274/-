@@ -44,6 +44,7 @@ class PolishCompareDialog(QDialog):
         btns = QHBoxLayout()
         btns.addStretch(1)
         self.btn_apply_replace = QPushButton("替换")
+        self.btn_apply_replace.setProperty("variant", "primary")
         self.btn_apply_insert = QPushButton("插入到光标处")
         self.btn_copy = QPushButton("复制润色结果")
         self.btn_cancel = QPushButton("取消")

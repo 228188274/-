@@ -5,9 +5,6 @@ from PySide6.QtGui import QAction
 from PySide6.QtWidgets import (
     QMainWindow,
     QTabWidget,
-    QWidget,
-    QVBoxLayout,
-    QLabel,
     QMessageBox,
 )
 
@@ -16,17 +13,8 @@ from pathlib import Path
 from novelja.core.security import load_last_project, load_recent_projects
 from novelja.ui.app_state import CurrentProject, get_app_state
 from novelja.ui.tabs.create_tab import CreateTab
-from novelja.ui.tabs.api_keys_tab import ApiKeysTab
 from novelja.ui.tabs.agent_tab import AgentTab
-
-
-class PlaceholderTab(QWidget):
-    def __init__(self, title: str) -> None:
-        super().__init__()
-        layout = QVBoxLayout(self)
-        label = QLabel(f"{title}：开发中")
-        label.setAlignment(Qt.AlignCenter)
-        layout.addWidget(label)
+from novelja.ui.tabs.settings_tab import SettingsTab
 
 
 class MainWindow(QMainWindow):
@@ -38,21 +26,17 @@ class MainWindow(QMainWindow):
         self.tabs = QTabWidget()
         tabs = self.tabs
         tabs.setDocumentMode(True)
+        tabs.setMovable(False)
+        tabs.setUsesScrollButtons(True)
 
-        # 参考原型的导航结构（MVP优先实现：开始创作、API密钥、智能体模式）
-        tabs.addTab(PlaceholderTab("智能对话"), "智能对话")
-        tabs.addTab(PlaceholderTab("智能体管理"), "智能体管理")
-        tabs.addTab(PlaceholderTab("大纲创作"), "大纲创作")
-        tabs.addTab(PlaceholderTab("角色管理"), "角色管理")
-        tabs.addTab(PlaceholderTab("章节编辑"), "章节编辑")
-
+        # 商业成品风格：主导航只展示已实现的核心能力。
         self.create_tab = CreateTab()
-        tabs.addTab(self.create_tab, "开始创作")
-        tabs.addTab(PlaceholderTab("文件管理"), "文件管理")
-        tabs.addTab(PlaceholderTab("文本润色"), "文本润色")
+        self.agent_tab = AgentTab()
+        self.settings_tab = SettingsTab()
 
-        tabs.addTab(ApiKeysTab(), "API密钥")
-        tabs.addTab(AgentTab(), "智能体模式")
+        tabs.addTab(self.create_tab, "开始创作")
+        tabs.addTab(self.agent_tab, "智能体模式")
+        tabs.addTab(self.settings_tab, "设置")
 
         self.setCentralWidget(tabs)
 

@@ -41,6 +41,7 @@ class BacktrackDialog(QDialog):
         btns = QHBoxLayout()
         btns.addStretch(1)
         self.btn_copy = QPushButton("复制摘要")
+        self.btn_copy.setProperty("variant", "primary")
         self.btn_close = QPushButton("关闭")
         btns.addWidget(self.btn_copy)
         btns.addWidget(self.btn_close)

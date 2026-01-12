@@ -52,6 +52,7 @@ class AgentTab(QWidget):
 
         row0 = QHBoxLayout()
         self.btn_open_project = QPushButton("打开作品")
+        self.btn_open_project.setProperty("variant", "primary")
         self.project_label = QLabel("未打开作品")
         self.project_label.setStyleSheet("color: #666;")
         row0.addWidget(self.btn_open_project)
@@ -74,6 +75,7 @@ class AgentTab(QWidget):
         self.btn_apply = QPushButton("应用勾选改动")
         self.btn_apply_all = QPushButton("全部应用")
         self.btn_rollback = QPushButton("回滚到应用前快照")
+        self.btn_generate.setProperty("variant", "primary")
         row.addWidget(self.btn_generate)
         row.addWidget(self.btn_apply)
         row.addWidget(self.btn_apply_all)

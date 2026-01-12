@@ -55,6 +55,7 @@ class ChangeDetailDialog(QDialog):
         btns = QHBoxLayout()
         btns.addStretch(1)
         close = QPushButton("关闭")
+        close.setProperty("variant", "primary")
         btns.addWidget(close)
         root.addLayout(btns)
         close.clicked.connect(self.accept)
