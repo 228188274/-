@@ -25,6 +25,7 @@ from novelja.core.ai.change_list import ChangeItem, apply_change
 from novelja.core.ai.client import ai_agent_change_list, load_ai_context
 from novelja.core.storage import ProjectStore
 from novelja.ui.async_worker import BackgroundTask
+from novelja.ui.app_state import CurrentProject, get_app_state
 
 
 class AgentTab(QWidget):
@@ -87,6 +88,12 @@ class AgentTab(QWidget):
 
         self._set_enabled(False)
 
+        # auto-follow current project opened in "开始创作"
+        get_app_state().projectChanged.connect(self._on_global_project_changed)
+        current = get_app_state().current_project()
+        if current:
+            self._use_project(current)
+
     def _set_enabled(self, enabled: bool) -> None:
         self.btn_generate.setEnabled(enabled)
         self.btn_apply.setEnabled(enabled)
@@ -112,6 +119,23 @@ class AgentTab(QWidget):
         self.project_label.setText(f"{self.project.title}  ({folder})")
         self.change_list.clear()
         self.last_snapshot_id = None
+        self._set_enabled(True)
+        get_app_state().set_current_project(folder, self.project)
+
+    def _on_global_project_changed(self, current: object) -> None:
+        if current is None:
+            return
+        if isinstance(current, CurrentProject):
+            self._use_project(current)
+
+    def _use_project(self, current: CurrentProject) -> None:
+        self.project_dir = current.folder
+        # Reload from disk to ensure consistency (agent writes happen here too)
+        try:
+            self.project = self.store.load_project(current.folder)
+        except Exception:
+            self.project = current.project
+        self.project_label.setText(f"{self.project.title}  ({self.project_dir})")
         self._set_enabled(True)
 
     def _book_text(self) -> str:

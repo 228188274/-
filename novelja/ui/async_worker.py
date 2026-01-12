@@ -20,30 +20,34 @@ class BackgroundTask(Generic[T]):
     on_error: Callable[[Exception], None]
 
     def start(self) -> None:
-        thread = QThread()
-        signals = _WorkerSignals()
+        # Keep references on self to prevent premature GC.
+        self._thread = QThread()
+        self._signals = _WorkerSignals()
 
         class Runner(QObject):
             def run(self) -> None:
                 try:
                     result = self_outer.func()
-                    signals.finished.emit(result)
+                    self_outer._signals.finished.emit(result)
                 except Exception as e:  # noqa: BLE001
-                    signals.failed.emit(e)
+                    self_outer._signals.failed.emit(e)
 
         self_outer = self
         runner = Runner()
-        runner.moveToThread(thread)
+        runner.moveToThread(self._thread)
 
         def cleanup() -> None:
-            thread.quit()
-            thread.wait(2000)
+            self_outer._thread.quit()
+            self_outer._thread.wait(2000)
             runner.deleteLater()
-            signals.deleteLater()
-            thread.deleteLater()
+            self_outer._signals.deleteLater()
+            self_outer._thread.deleteLater()
+            # break ref cycles
+            self_outer._signals = None  # type: ignore[assignment]
+            self_outer._thread = None  # type: ignore[assignment]
 
-        signals.finished.connect(lambda r: (self.on_success(r), cleanup()))
-        signals.failed.connect(lambda e: (self.on_error(e), cleanup()))
-        thread.started.connect(runner.run)
-        thread.start()
+        self._signals.finished.connect(lambda r: (self.on_success(r), cleanup()))
+        self._signals.failed.connect(lambda e: (self.on_error(e), cleanup()))
+        self._thread.started.connect(runner.run)
+        self._thread.start()
 

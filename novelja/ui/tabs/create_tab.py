@@ -23,6 +23,7 @@ from novelja.core.ai.client import ai_next_preview, ai_polish, ai_summarize, loa
 from novelja.core.import_export import export_chapters_to_markdown, read_text_file, split_book_to_chapters
 from novelja.core.storage import ProjectStore
 from novelja.ui.async_worker import BackgroundTask
+from novelja.ui.app_state import get_app_state
 from novelja.ui.dialogs.backtrack_dialog import BacktrackDialog
 from novelja.ui.dialogs.polish_dialog import PolishCompareDialog
 
@@ -48,6 +49,8 @@ class CreateTab(QWidget):
         self.autosave_timer = QTimer(self)
         self.autosave_timer.setSingleShot(True)
         self.autosave_timer.timeout.connect(self._autosave_if_needed)
+
+        self._backtrack_dialog: BacktrackDialog | None = None
 
         root = QHBoxLayout(self)
         splitter = QSplitter(Qt.Horizontal)
@@ -192,6 +195,7 @@ class CreateTab(QWidget):
         self.current_chapter_id = None
         self._dirty = False
         self._set_enabled(True)
+        get_app_state().set_current_project(folder, self.project)
 
     def _refresh_chapter_list(self) -> None:
         if not self._ensure_project_open():
@@ -296,6 +300,8 @@ class CreateTab(QWidget):
         self.chapter_meta.setText(
             f"状态：{'已提交' if meta.status == 'submitted' else '草稿'}    字数：{meta.wordCount}    最后修改：{meta.lastModifiedAt}"
         )
+        # keep global state fresh (lightweight)
+        get_app_state().set_current_project(self.project_dir, self.project)  # type: ignore[arg-type]
 
     def _submit_chapter(self) -> None:
         if not self._ensure_project_open() or not self.current_chapter_id:
@@ -479,21 +485,23 @@ class CreateTab(QWidget):
             return
 
         summary = "（未配置AI）" if not load_ai_context() else "生成中…"
-        dlg = BacktrackDialog(meta.title, prev_text, summary_text=summary, parent=self)
-        dlg.show()
+        self._backtrack_dialog = BacktrackDialog(meta.title, prev_text, summary_text=summary, parent=self)
+        self._backtrack_dialog.show()
 
         if not load_ai_context():
-            dlg.set_summary(self._previous_chapter_summary_fallback())
+            self._backtrack_dialog.set_summary(self._previous_chapter_summary_fallback())
             return
 
         def work() -> str:
             return ai_summarize(prev_text)
 
         def ok(s: str) -> None:
-            dlg.set_summary(s.strip())
+            if self._backtrack_dialog:
+                self._backtrack_dialog.set_summary(s.strip())
 
         def err(e: Exception) -> None:
-            dlg.set_summary(self._previous_chapter_summary_fallback() or f"摘要生成失败：{e}")
+            if self._backtrack_dialog:
+                self._backtrack_dialog.set_summary(self._previous_chapter_summary_fallback() or f"摘要生成失败：{e}")
 
         BackgroundTask(func=work, on_success=ok, on_error=err).start()
 
