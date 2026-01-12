@@ -21,6 +21,13 @@ pip3 install -r requirements.txt
 python3 -m novelja
 ```
 
+## 打包（可分发）
+> 生成可运行的本地桌面包（`dist/novelja/`）。
+
+```bash
+bash build.sh
+```
+
 ### Linux 可能需要的系统依赖
 如果启动时报 Qt/EGL 相关动态库缺失，可安装：
 

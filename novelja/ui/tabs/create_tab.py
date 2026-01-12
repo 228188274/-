@@ -175,6 +175,19 @@ class CreateTab(QWidget):
         self._refresh_chapter_list()
         self.chapter_list.setCurrentRow(0)
 
+    # Public helpers for main window menu actions
+    def menu_new_project(self) -> None:
+        self._new_project()
+
+    def menu_open_project(self) -> None:
+        self._open_project()
+
+    def menu_import(self) -> None:
+        self._import_file()
+
+    def menu_export(self) -> None:
+        self._export_file()
+
     def _open_project(self) -> None:
         folder_str = QFileDialog.getExistingDirectory(self, "选择作品文件夹")
         if not folder_str:
@@ -409,7 +422,8 @@ class CreateTab(QWidget):
         cursor = self.editor.textCursor()
         selected = cursor.selectedText()
         selected = selected.replace("\u2029", "\n")  # Qt selection line separator
-        scope_text = selected.strip() if selected.strip() else self.editor.toPlainText()
+        has_selection = bool(selected.strip())
+        scope_text = selected.strip() if has_selection else self.editor.toPlainText()
         if not scope_text.strip():
             QMessageBox.information(self, "AI润色", "当前内容为空。")
             return
@@ -427,19 +441,33 @@ class CreateTab(QWidget):
             self.btn_polish.setEnabled(True)
             self.btn_polish.setText("AI润色")
             dlg = PolishCompareDialog(scope_text, polished, parent=self)
-            if dlg.exec() == dlg.Accepted:
-                out = dlg.polished_text()
-                if selected.strip():
-                    c = self.editor.textCursor()
-                    c.insertText(out)
-                else:
-                    self._loading = True
-                    try:
-                        self.editor.setPlainText(out)
-                    finally:
-                        self._loading = False
+            if dlg.exec() != dlg.Accepted:
+                return
+
+            action = dlg.chosen_action()
+            out = dlg.polished_text()
+            if action == "copy":
+                return
+
+            if action == "insert":
+                c = self.editor.textCursor()
+                c.insertText(out)
                 self._dirty = True
                 self._autosave_if_needed()
+                return
+
+            # default: replace
+            if has_selection:
+                c = self.editor.textCursor()
+                c.insertText(out)  # replaces selection
+            else:
+                self._loading = True
+                try:
+                    self.editor.setPlainText(out)
+                finally:
+                    self._loading = False
+            self._dirty = True
+            self._autosave_if_needed()
 
         def err(e: Exception) -> None:
             self.btn_polish.setEnabled(True)
@@ -484,8 +512,11 @@ class CreateTab(QWidget):
             QMessageBox.information(self, "回溯阅读", "上一章内容为空。")
             return
 
-        summary = "（未配置AI）" if not load_ai_context() else "生成中…"
+        summary = "（未配置AI）" if not load_ai_context() else ""
         self._backtrack_dialog = BacktrackDialog(meta.title, prev_text, summary_text=summary, parent=self)
+        self._backtrack_dialog.setModal(True)
+        if load_ai_context():
+            self._backtrack_dialog.set_summary_loading()
         self._backtrack_dialog.show()
 
         if not load_ai_context():

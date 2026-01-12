@@ -1,12 +1,14 @@
 from __future__ import annotations
 
 from PySide6.QtCore import Qt
+from PySide6.QtGui import QAction
 from PySide6.QtWidgets import (
     QMainWindow,
     QTabWidget,
     QWidget,
     QVBoxLayout,
     QLabel,
+    QMessageBox,
 )
 
 from novelja.ui.tabs.create_tab import CreateTab
@@ -29,7 +31,8 @@ class MainWindow(QMainWindow):
         self.setWindowTitle("小说佳 - AI辅助小说创作工具")
         self.resize(1200, 800)
 
-        tabs = QTabWidget()
+        self.tabs = QTabWidget()
+        tabs = self.tabs
         tabs.setDocumentMode(True)
 
         # 参考原型的导航结构（MVP优先实现：开始创作、API密钥、智能体模式）
@@ -39,7 +42,8 @@ class MainWindow(QMainWindow):
         tabs.addTab(PlaceholderTab("角色管理"), "角色管理")
         tabs.addTab(PlaceholderTab("章节编辑"), "章节编辑")
 
-        tabs.addTab(CreateTab(), "开始创作")
+        self.create_tab = CreateTab()
+        tabs.addTab(self.create_tab, "开始创作")
         tabs.addTab(PlaceholderTab("文件管理"), "文件管理")
         tabs.addTab(PlaceholderTab("文本润色"), "文本润色")
 
@@ -47,4 +51,46 @@ class MainWindow(QMainWindow):
         tabs.addTab(AgentTab(), "智能体模式")
 
         self.setCentralWidget(tabs)
+
+        self._init_menu()
+
+    def _init_menu(self) -> None:
+        bar = self.menuBar()
+        menu_file = bar.addMenu("文件")
+
+        act_new = QAction("新建作品", self)
+        act_new.setShortcut("Ctrl+N")
+        act_new.triggered.connect(lambda: (self.tabs.setCurrentWidget(self.create_tab), self.create_tab.menu_new_project()))
+
+        act_open = QAction("打开作品", self)
+        act_open.setShortcut("Ctrl+O")
+        act_open.triggered.connect(lambda: (self.tabs.setCurrentWidget(self.create_tab), self.create_tab.menu_open_project()))
+
+        act_import = QAction("导入…", self)
+        act_import.setShortcut("Ctrl+I")
+        act_import.triggered.connect(lambda: (self.tabs.setCurrentWidget(self.create_tab), self.create_tab.menu_import()))
+
+        act_export = QAction("导出…", self)
+        act_export.setShortcut("Ctrl+E")
+        act_export.triggered.connect(lambda: (self.tabs.setCurrentWidget(self.create_tab), self.create_tab.menu_export()))
+
+        act_quit = QAction("退出", self)
+        act_quit.setShortcut("Ctrl+Q")
+        act_quit.triggered.connect(self.close)
+
+        menu_file.addAction(act_new)
+        menu_file.addAction(act_open)
+        menu_file.addSeparator()
+        menu_file.addAction(act_import)
+        menu_file.addAction(act_export)
+        menu_file.addSeparator()
+        menu_file.addAction(act_quit)
+
+        menu_help = bar.addMenu("帮助")
+        act_about = QAction("关于", self)
+        act_about.triggered.connect(self._about)
+        menu_help.addAction(act_about)
+
+    def _about(self) -> None:
+        QMessageBox.information(self, "关于 小说佳", "小说佳（开发版）：本地小说创作 + AI辅助（DeepSeek/智谱）")
 

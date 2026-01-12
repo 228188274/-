@@ -26,6 +26,7 @@ from novelja.core.ai.client import ai_agent_change_list, load_ai_context
 from novelja.core.storage import ProjectStore
 from novelja.ui.async_worker import BackgroundTask
 from novelja.ui.app_state import CurrentProject, get_app_state
+from novelja.ui.dialogs.change_detail_dialog import ChangeDetailDialog
 
 
 class AgentTab(QWidget):
@@ -85,6 +86,7 @@ class AgentTab(QWidget):
         self.btn_apply.clicked.connect(self._apply_checked)
         self.btn_apply_all.clicked.connect(self._apply_all)
         self.btn_rollback.clicked.connect(self._rollback)
+        self.change_list.itemDoubleClicked.connect(self._show_change_detail)
 
         self._set_enabled(False)
 
@@ -202,6 +204,25 @@ class AgentTab(QWidget):
 
         BackgroundTask(func=work, on_success=ok, on_error=err).start()
 
+    def _show_change_detail(self, item: QListWidgetItem) -> None:
+        d = item.data(Qt.UserRole)
+        if not isinstance(d, dict):
+            return
+        try:
+            c = ChangeItem.from_dict(d)
+        except Exception:
+            return
+        title = f"[{c.chapterIndex}] {c.chapterTitle}"
+        dlg = ChangeDetailDialog(
+            title=title,
+            reason=c.reason,
+            kind=c.kind,
+            before_text=c.beforeText or "",
+            after_text=c.afterText or "",
+            parent=self,
+        )
+        dlg.exec()
+
     def _write_agent_run(self, changes: list[dict]) -> None:
         if not self._ensure_project_open():
             return
@@ -270,17 +291,19 @@ class AgentTab(QWidget):
             original = self.store.read_chapter_text(self.project_dir, self.project, cid)  # type: ignore[arg-type]
             res = apply_change(original, change)
             if not res.applied:
-                conflicts.append(f"[{change.chapterIndex}] {change.reason} -> {res.message}")
+                conflicts.append(f"[{change.chapterIndex}] {change.chapterTitle} | {change.kind} | {change.reason} -> {res.message}")
                 continue
             self.project = self.store.write_chapter_text(self.project_dir, self.project, cid, res.new_text)  # type: ignore[arg-type]
             applied += 1
 
         msg = f"已应用 {applied} 条改动。\n快照ID：{snapshot_id}"
         if conflicts:
-            msg += "\n\n未应用/冲突：\n" + "\n".join(conflicts[:20])
+            msg += "\n\n未应用/冲突（建议双击查看详情后手动处理）：\n" + "\n".join(conflicts[:20])
             if len(conflicts) > 20:
                 msg += f"\n… 共 {len(conflicts)} 条冲突"
-        QMessageBox.information(self, "应用结果", msg)
+            QMessageBox.warning(self, "应用结果（有冲突）", msg)
+        else:
+            QMessageBox.information(self, "应用结果", msg)
 
     def _rollback(self) -> None:
         if not self._ensure_project_open():

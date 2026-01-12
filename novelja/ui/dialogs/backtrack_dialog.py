@@ -28,7 +28,8 @@ class BacktrackDialog(QDialog):
         left.addWidget(self.text_view, 1)
 
         right = QVBoxLayout()
-        right.addWidget(QLabel("摘要（可生成/可复制）"))
+        self.summary_label = QLabel("摘要（可复制）")
+        right.addWidget(self.summary_label)
         self.summary_view = QPlainTextEdit()
         self.summary_view.setPlainText(summary_text)
         right.addWidget(self.summary_view, 1)
@@ -39,12 +40,29 @@ class BacktrackDialog(QDialog):
 
         btns = QHBoxLayout()
         btns.addStretch(1)
+        self.btn_copy = QPushButton("复制摘要")
         self.btn_close = QPushButton("关闭")
+        btns.addWidget(self.btn_copy)
         btns.addWidget(self.btn_close)
         root.addLayout(btns)
 
         self.btn_close.clicked.connect(self.accept)
+        self.btn_copy.clicked.connect(self._copy_summary)
+
+    def set_summary_loading(self) -> None:
+        self.summary_label.setText("摘要（生成中…）")
+        self.summary_view.setPlainText("生成中…")
 
     def set_summary(self, text: str) -> None:
+        self.summary_label.setText("摘要（可复制）")
         self.summary_view.setPlainText(text)
+
+    def _copy_summary(self) -> None:
+        try:
+            from PySide6.QtWidgets import QApplication
+
+            cb = QApplication.clipboard()
+            cb.setText(self.summary_view.toPlainText(), mode=cb.Clipboard)
+        except Exception:
+            pass
 

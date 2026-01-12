@@ -1,0 +1,15 @@
+[project]
+name = "novelja"
+version = "0.1.0"
+description = "小说佳：本地小说创作 + AI辅助（DeepSeek/智谱）"
+requires-python = ">=3.12"
+dependencies = [
+  "PySide6==6.10.1",
+  "requests==2.32.5",
+  "platformdirs==4.5.1",
+  "keyring==25.7.0",
+]
+
+[project.scripts]
+novelja = "novelja.app:main"
+

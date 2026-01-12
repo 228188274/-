@@ -53,12 +53,102 @@ class ApplyResult:
     message: str = ""
 
 
+def _paragraph_spans(text: str) -> list[tuple[int, int]]:
+    """
+    Returns (start, end) spans for paragraphs.
+    Paragraphs are split by one or more blank lines.
+    """
+    if not text:
+        return []
+    spans: list[tuple[int, int]] = []
+    n = len(text)
+    i = 0
+    while i < n:
+        # skip leading blank lines
+        while i < n and text[i] in "\r\n":
+            i += 1
+        if i >= n:
+            break
+        start = i
+        # advance until blank line block
+        while i < n:
+            if text[i] == "\n":
+                # check blank line (next char newline) or CRLF patterns
+                j = i
+                # consume consecutive newlines
+                while j < n and text[j] == "\n":
+                    j += 1
+                # if we had 2+ newlines, paragraph ended at i
+                if j - i >= 2:
+                    break
+            i += 1
+        end = i
+        spans.append((start, end))
+        # consume blank line separators
+        while i < n and text[i] in "\r\n":
+            i += 1
+    return spans
+
+
+def _apply_with_paragraph_index(original: str, change: ChangeItem) -> ApplyResult | None:
+    idx = change.locator.paragraphIndex
+    if idx is None:
+        return None
+    spans = _paragraph_spans(original)
+    if not spans:
+        return ApplyResult(False, original, "正文无段落可定位。")
+    if idx < 0 or idx >= len(spans):
+        return ApplyResult(False, original, f"paragraphIndex 越界：{idx}（总段落 {len(spans)}）")
+
+    start, end = spans[idx]
+    para = original[start:end]
+    before = (change.beforeText or "").strip()
+    after = (change.afterText or "").rstrip()
+
+    if change.kind in ("replace", "delete"):
+        if not before:
+            return ApplyResult(False, original, "缺少 beforeText，拒绝应用。")
+        count = para.count(before)
+        if count != 1:
+            return ApplyResult(False, original, "段内匹配不唯一/不存在，拒绝应用。")
+        if change.kind == "delete":
+            new_para = para.replace(before, "", 1)
+        else:
+            if not after:
+                return ApplyResult(False, original, "缺少 afterText，拒绝应用。")
+            new_para = para.replace(before, after, 1)
+        return ApplyResult(True, original[:start] + new_para + original[end:], "已按段落索引应用。")
+
+    if change.kind in ("insert_before", "insert_after"):
+        anchor = (change.locator.beforeAnchor or change.locator.afterAnchor or "").strip() or before
+        if not anchor:
+            return ApplyResult(False, original, "缺少锚点，拒绝应用。")
+        count = para.count(anchor)
+        if count != 1:
+            return ApplyResult(False, original, "段内锚点匹配不唯一/不存在，拒绝应用。")
+        if not after:
+            return ApplyResult(False, original, "缺少 afterText，拒绝应用。")
+        rel = para.find(anchor)
+        if change.kind == "insert_before":
+            new_para = para[:rel] + after + "\n" + para[rel:]
+        else:
+            rel_end = rel + len(anchor)
+            new_para = para[:rel_end] + "\n" + after + para[rel_end:]
+        return ApplyResult(True, original[:start] + new_para + original[end:], "已按段落索引应用。")
+
+    return ApplyResult(False, original, f"不支持的改动类型：{change.kind}")
+
+
 def apply_change(original: str, change: ChangeItem) -> ApplyResult:
     """
     MVP安全策略：
     - replace/delete：要求 beforeText 在正文中出现且仅出现一次，才会应用
     - insert_*：基于锚点插入（若锚点唯一匹配），否则拒绝
     """
+    by_para = _apply_with_paragraph_index(original, change)
+    if by_para is not None:
+        return by_para
+
     text = original
     before = (change.beforeText or "").strip()
     after = (change.afterText or "").rstrip()

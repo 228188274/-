@@ -16,9 +16,10 @@ class PolishCompareDialog(QDialog):
         super().__init__(parent)
         self.setWindowTitle("AI润色对比")
         self.resize(1000, 700)
+        self._action: str | None = None  # replace | insert | copy | None
 
         root = QVBoxLayout(self)
-        root.addWidget(QLabel("对比原文与润色结果，确认后再应用："))
+        root.addWidget(QLabel("对比原文与润色结果，选择应用方式："))
 
         row = QHBoxLayout()
 
@@ -42,22 +43,37 @@ class PolishCompareDialog(QDialog):
 
         btns = QHBoxLayout()
         btns.addStretch(1)
-        self.btn_apply_replace = QPushButton("替换原文")
+        self.btn_apply_replace = QPushButton("替换")
+        self.btn_apply_insert = QPushButton("插入到光标处")
         self.btn_copy = QPushButton("复制润色结果")
         self.btn_cancel = QPushButton("取消")
         btns.addWidget(self.btn_apply_replace)
+        btns.addWidget(self.btn_apply_insert)
         btns.addWidget(self.btn_copy)
         btns.addWidget(self.btn_cancel)
         root.addLayout(btns)
 
-        self.btn_apply_replace.clicked.connect(self.accept)
+        self.btn_apply_replace.clicked.connect(self._choose_replace)
+        self.btn_apply_insert.clicked.connect(self._choose_insert)
         self.btn_cancel.clicked.connect(self.reject)
         self.btn_copy.clicked.connect(self._copy)
+
+    def chosen_action(self) -> str | None:
+        return self._action
+
+    def _choose_replace(self) -> None:
+        self._action = "replace"
+        self.accept()
+
+    def _choose_insert(self) -> None:
+        self._action = "insert"
+        self.accept()
 
     def _copy(self) -> None:
         cb = self.clipboard()
         if cb:
             cb.setText(self.polished_view.toPlainText(), mode=cb.Clipboard)
+        self._action = "copy"
 
     @staticmethod
     def clipboard():
