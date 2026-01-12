@@ -192,6 +192,9 @@ class CreateTab(QWidget):
         folder_str = QFileDialog.getExistingDirectory(self, "选择作品文件夹")
         if not folder_str:
             return
+        self.open_project_path(folder_str)
+
+    def open_project_path(self, folder_str: str) -> None:
         folder = Path(folder_str)
         if not (folder / "project.json").exists():
             QMessageBox.warning(self, "无法打开", "所选文件夹不包含 project.json，可能不是小说佳作品目录。")

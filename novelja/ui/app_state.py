@@ -7,6 +7,7 @@ from PySide6.QtCore import QObject, Signal
 from PySide6.QtWidgets import QApplication
 
 from novelja.core.models import Project
+from novelja.core.security import add_recent_project
 
 
 @dataclass
@@ -34,6 +35,7 @@ class AppState(QObject):
 
     def set_current_project(self, folder: Path, project: Project) -> None:
         self._current = CurrentProject(folder=folder, project=project)
+        add_recent_project(str(folder))
         self.projectChanged.emit(self._current)
 
     def clear_project(self) -> None:

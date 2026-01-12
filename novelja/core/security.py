@@ -24,6 +24,9 @@ class AiSettings:
     model: str = ""
     base_url: str = ""
 
+RECENT_PROJECTS_KEY = "recent_projects"
+RECENT_PROJECTS_MAX = 10
+
 
 def save_api_key(provider: str, api_key: str) -> None:
     """
@@ -82,6 +85,32 @@ def load_settings_raw() -> dict:
         return json.loads(path.read_text(encoding="utf-8"))
     except Exception:
         return {}
+
+def load_recent_projects() -> list[str]:
+    data = load_settings_raw()
+    items = data.get(RECENT_PROJECTS_KEY) or []
+    if not isinstance(items, list):
+        return []
+    # normalize to strings
+    out: list[str] = []
+    for x in items:
+        if isinstance(x, str) and x.strip():
+            out.append(x)
+    return out[:RECENT_PROJECTS_MAX]
+
+
+def add_recent_project(path: str) -> None:
+    p = str(path).strip()
+    if not p:
+        return
+    data = load_settings_raw()
+    items = data.get(RECENT_PROJECTS_KEY) or []
+    if not isinstance(items, list):
+        items = []
+    # de-dup (case-insensitive on Windows-like paths is out of scope; keep simple)
+    new_items = [p] + [x for x in items if isinstance(x, str) and x != p]
+    data[RECENT_PROJECTS_KEY] = new_items[:RECENT_PROJECTS_MAX]
+    _write_settings_raw(_config_path(), data)
 
 
 def _write_settings_raw(path: Path, data: dict) -> None:

@@ -11,6 +11,7 @@ from PySide6.QtWidgets import (
     QMessageBox,
 )
 
+from novelja.core.security import load_recent_projects
 from novelja.ui.tabs.create_tab import CreateTab
 from novelja.ui.tabs.api_keys_tab import ApiKeysTab
 from novelja.ui.tabs.agent_tab import AgentTab
@@ -80,6 +81,8 @@ class MainWindow(QMainWindow):
 
         menu_file.addAction(act_new)
         menu_file.addAction(act_open)
+        menu_recent = menu_file.addMenu("最近打开")
+        menu_recent.aboutToShow.connect(lambda: self._populate_recent(menu_recent))
         menu_file.addSeparator()
         menu_file.addAction(act_import)
         menu_file.addAction(act_export)
@@ -90,6 +93,24 @@ class MainWindow(QMainWindow):
         act_about = QAction("关于", self)
         act_about.triggered.connect(self._about)
         menu_help.addAction(act_about)
+
+    def _populate_recent(self, menu_recent) -> None:
+        menu_recent.clear()
+        items = load_recent_projects()
+        if not items:
+            disabled = QAction("（暂无）", self)
+            disabled.setEnabled(False)
+            menu_recent.addAction(disabled)
+            return
+        for p in items:
+            act = QAction(p, self)
+            act.triggered.connect(lambda checked=False, path=p: self._open_recent(path))
+            menu_recent.addAction(act)
+
+    def _open_recent(self, path: str) -> None:
+        # Delegate to CreateTab: open project directory (no extra prompts)
+        self.tabs.setCurrentWidget(self.create_tab)
+        self.create_tab.open_project_path(path)
 
     def _about(self) -> None:
         QMessageBox.information(self, "关于 小说佳", "小说佳（开发版）：本地小说创作 + AI辅助（DeepSeek/智谱）")
