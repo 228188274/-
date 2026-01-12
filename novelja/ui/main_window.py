@@ -14,6 +14,7 @@ from PySide6.QtWidgets import (
 from pathlib import Path
 
 from novelja.core.security import load_recent_projects
+from novelja.ui.app_state import CurrentProject, get_app_state
 from novelja.ui.tabs.create_tab import CreateTab
 from novelja.ui.tabs.api_keys_tab import ApiKeysTab
 from novelja.ui.tabs.agent_tab import AgentTab
@@ -56,6 +57,7 @@ class MainWindow(QMainWindow):
         self.setCentralWidget(tabs)
 
         self._init_menu()
+        self._init_status_bar()
 
     def _init_menu(self) -> None:
         bar = self.menuBar()
@@ -125,4 +127,22 @@ class MainWindow(QMainWindow):
 
     def _about(self) -> None:
         QMessageBox.information(self, "关于 小说佳", "小说佳（开发版）：本地小说创作 + AI辅助（DeepSeek/智谱）")
+
+    def _init_status_bar(self) -> None:
+        self.statusBar().showMessage("未打开作品")
+        get_app_state().projectChanged.connect(self._on_project_changed)
+        current = get_app_state().current_project()
+        if current:
+            self._on_project_changed(current)
+
+    def _on_project_changed(self, current: object) -> None:
+        if current is None:
+            self.statusBar().showMessage("未打开作品")
+            return
+        if not isinstance(current, CurrentProject):
+            return
+        proj = current.project
+        autosave = getattr(getattr(proj, "settings", None), "autosaveEnabled", True)
+        autosave_s = "开" if autosave else "关"
+        self.statusBar().showMessage(f"作品：{proj.title}    位置：{current.folder}    自动保存：{autosave_s}")
 

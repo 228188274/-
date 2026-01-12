@@ -87,21 +87,46 @@ def load_settings_raw() -> dict:
         return {}
 
 def load_recent_projects() -> list[str]:
+    cleaned, changed = prune_recent_projects()
+    if changed:
+        data = load_settings_raw()
+        data[RECENT_PROJECTS_KEY] = cleaned
+        _write_settings_raw(_config_path(), data)
+    return cleaned[:RECENT_PROJECTS_MAX]
+
+
+def prune_recent_projects() -> tuple[list[str], bool]:
+    """
+    Remove non-existent paths or folders without project.json.
+    Returns (cleaned_list, changed).
+    """
     data = load_settings_raw()
     items = data.get(RECENT_PROJECTS_KEY) or []
     if not isinstance(items, list):
-        return []
-    # normalize to strings
+        return [], False
     out: list[str] = []
     for x in items:
-        if isinstance(x, str) and x.strip():
-            out.append(x)
-    return out[:RECENT_PROJECTS_MAX]
+        if not isinstance(x, str):
+            continue
+        p = x.strip()
+        if not p:
+            continue
+        folder = Path(p)
+        if folder.exists() and (folder / "project.json").exists():
+            out.append(p)
+    out = out[:RECENT_PROJECTS_MAX]
+    old_norm = [str(i).strip() for i in items if isinstance(i, str) and str(i).strip()]
+    changed = out != old_norm[:RECENT_PROJECTS_MAX]
+    return out, changed
 
 
 def add_recent_project(path: str) -> None:
     p = str(path).strip()
     if not p:
+        return
+    # Only add valid project folder
+    folder = Path(p)
+    if not (folder.exists() and (folder / "project.json").exists()):
         return
     data = load_settings_raw()
     items = data.get(RECENT_PROJECTS_KEY) or []

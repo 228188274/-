@@ -21,7 +21,7 @@ from PySide6.QtWidgets import (
 
 from novelja.core.ai.client import ai_next_preview, ai_polish, ai_summarize, load_ai_context
 from novelja.core.import_export import export_chapters_to_markdown, read_text_file, split_book_to_chapters
-from novelja.core.security import load_recent_projects
+from novelja.core.security import load_recent_projects, prune_recent_projects
 from novelja.core.storage import ProjectStore
 from novelja.ui.async_worker import BackgroundTask
 from novelja.ui.app_state import get_app_state
@@ -88,6 +88,12 @@ class CreateTab(QWidget):
         self.recent_list = QListWidget()
         left_layout.addWidget(self.recent_list)
 
+        recent_actions = QHBoxLayout()
+        self.btn_recent_cleanup = QPushButton("清理无效")
+        recent_actions.addWidget(self.btn_recent_cleanup)
+        recent_actions.addStretch(1)
+        left_layout.addLayout(recent_actions)
+
         self.chapter_filter = QLineEdit()
         self.chapter_filter.setPlaceholderText("搜索章节（标题关键词）")
         left_layout.addWidget(self.chapter_filter)
@@ -153,6 +159,7 @@ class CreateTab(QWidget):
         self._refresh_recent_projects()
         get_app_state().projectChanged.connect(lambda _: self._refresh_recent_projects())
         self.recent_list.itemDoubleClicked.connect(self._open_recent_item)
+        self.btn_recent_cleanup.clicked.connect(self._cleanup_recent_projects)
 
     def _set_enabled(self, enabled: bool) -> None:
         self.btn_new_chapter.setEnabled(enabled)
@@ -172,6 +179,7 @@ class CreateTab(QWidget):
         no_project = self.project_dir is None or self.project is None
         self.recent_label.setVisible(no_project)
         self.recent_list.setVisible(no_project)
+        self.btn_recent_cleanup.setVisible(no_project)
 
     def _ensure_project_open(self) -> bool:
         if self.project_dir is None or self.project is None:
@@ -236,6 +244,14 @@ class CreateTab(QWidget):
         if not path or path == "（暂无）":
             return
         self.open_project_path(path)
+
+    def _cleanup_recent_projects(self) -> None:
+        cleaned, changed = prune_recent_projects()
+        if changed:
+            QMessageBox.information(self, "已清理", f"已清理无效最近作品记录，剩余 {len(cleaned)} 条。")
+        else:
+            QMessageBox.information(self, "无需清理", "最近作品记录均有效。")
+        self._refresh_recent_projects()
 
     def _load_project(self, folder: Path) -> None:
         self.project_dir = folder
