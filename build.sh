@@ -9,7 +9,7 @@ python3 -m PyInstaller \
   --clean \
   --name "novelja" \
   --windowed \
-  -m novelja
+  "novelja/__main__.py"
 
 echo "Build complete: dist/novelja/"
 
