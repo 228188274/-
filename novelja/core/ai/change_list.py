@@ -90,11 +90,31 @@ def _paragraph_spans(text: str) -> list[tuple[int, int]]:
     return spans
 
 
+def _paragraph_spans_fallback_single_newline(text: str) -> list[tuple[int, int]]:
+    """
+    Fallback when novel text has no blank-line paragraphs:
+    treat each non-empty line as a "paragraph".
+    """
+    if not text:
+        return []
+    spans: list[tuple[int, int]] = []
+    start = 0
+    for line in text.splitlines(True):  # keepends
+        end = start + len(line)
+        if line.strip():
+            spans.append((start, end))
+        start = end
+    return spans
+
+
 def _apply_with_paragraph_index(original: str, change: ChangeItem) -> ApplyResult | None:
     idx = change.locator.paragraphIndex
     if idx is None:
         return None
     spans = _paragraph_spans(original)
+    # If user doesn't separate paragraphs with blank lines, fall back to per-line indexing.
+    if len(spans) <= 1 and "\n\n" not in original and "\r\n\r\n" not in original:
+        spans = _paragraph_spans_fallback_single_newline(original)
     if not spans:
         return ApplyResult(False, original, "正文无段落可定位。")
     if idx < 0 or idx >= len(spans):

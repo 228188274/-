@@ -13,7 +13,7 @@ from PySide6.QtWidgets import (
 
 from pathlib import Path
 
-from novelja.core.security import load_recent_projects
+from novelja.core.security import load_last_project, load_recent_projects
 from novelja.ui.app_state import CurrentProject, get_app_state
 from novelja.ui.tabs.create_tab import CreateTab
 from novelja.ui.tabs.api_keys_tab import ApiKeysTab
@@ -58,6 +58,7 @@ class MainWindow(QMainWindow):
 
         self._init_menu()
         self._init_status_bar()
+        self._auto_open_last_project()
 
     def _init_menu(self) -> None:
         bar = self.menuBar()
@@ -124,6 +125,16 @@ class MainWindow(QMainWindow):
         # Delegate to CreateTab: open project directory (no extra prompts)
         self.tabs.setCurrentWidget(self.create_tab)
         self.create_tab.open_project_path(path)
+
+    def _auto_open_last_project(self) -> None:
+        """
+        Startup quality-of-life: if last project exists, open it silently.
+        """
+        p = load_last_project()
+        if not p:
+            return
+        self.tabs.setCurrentWidget(self.create_tab)
+        self.create_tab.open_project_path(p, silent=True)
 
     def _about(self) -> None:
         QMessageBox.information(self, "关于 小说佳", "小说佳（开发版）：本地小说创作 + AI辅助（DeepSeek/智谱）")

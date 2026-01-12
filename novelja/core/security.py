@@ -26,6 +26,7 @@ class AiSettings:
 
 RECENT_PROJECTS_KEY = "recent_projects"
 RECENT_PROJECTS_MAX = 10
+LAST_PROJECT_KEY = "last_project"
 
 
 def save_api_key(provider: str, api_key: str) -> None:
@@ -136,6 +137,29 @@ def add_recent_project(path: str) -> None:
     new_items = [p] + [x for x in items if isinstance(x, str) and x != p]
     data[RECENT_PROJECTS_KEY] = new_items[:RECENT_PROJECTS_MAX]
     _write_settings_raw(_config_path(), data)
+
+
+def set_last_project(path: str) -> None:
+    p = str(path).strip()
+    if not p:
+        return
+    folder = Path(p)
+    if not (folder.exists() and (folder / "project.json").exists()):
+        return
+    data = load_settings_raw()
+    data[LAST_PROJECT_KEY] = p
+    _write_settings_raw(_config_path(), data)
+
+
+def load_last_project() -> str | None:
+    data = load_settings_raw()
+    p = data.get(LAST_PROJECT_KEY)
+    if not isinstance(p, str) or not p.strip():
+        return None
+    folder = Path(p.strip())
+    if folder.exists() and (folder / "project.json").exists():
+        return str(folder)
+    return None
 
 
 def _write_settings_raw(path: Path, data: dict) -> None:

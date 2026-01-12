@@ -217,10 +217,11 @@ class CreateTab(QWidget):
             return
         self.open_project_path(folder_str)
 
-    def open_project_path(self, folder_str: str) -> None:
+    def open_project_path(self, folder_str: str, *, silent: bool = False) -> None:
         folder = Path(folder_str)
         if not (folder / "project.json").exists():
-            QMessageBox.warning(self, "无法打开", "所选文件夹不包含 project.json，可能不是小说佳作品目录。")
+            if not silent:
+                QMessageBox.warning(self, "无法打开", "所选文件夹不包含 project.json，可能不是小说佳作品目录。")
             return
         self._load_project(folder)
         self._refresh_chapter_list()
