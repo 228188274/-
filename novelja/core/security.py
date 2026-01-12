@@ -27,6 +27,9 @@ class AiSettings:
 RECENT_PROJECTS_KEY = "recent_projects"
 RECENT_PROJECTS_MAX = 10
 LAST_PROJECT_KEY = "last_project"
+UI_THEME_KEY = "ui_theme"  # light | dark | system
+DEFAULT_AUTOSAVE_ENABLED_KEY = "default_autosave_enabled"
+DEFAULT_AUTOSAVE_SECONDS_KEY = "default_autosave_seconds"
 
 
 def save_api_key(provider: str, api_key: str) -> None:
@@ -160,6 +163,50 @@ def load_last_project() -> str | None:
     if folder.exists() and (folder / "project.json").exists():
         return str(folder)
     return None
+
+
+def load_ui_theme() -> str:
+    """
+    Returns: light | dark | system
+    """
+    data = load_settings_raw()
+    v = data.get(UI_THEME_KEY)
+    if isinstance(v, str) and v.strip().lower() in ("light", "dark", "system"):
+        return v.strip().lower()
+    return "system"
+
+
+def save_ui_theme(theme: str) -> None:
+    t = str(theme).strip().lower()
+    if t not in ("light", "dark", "system"):
+        t = "system"
+    data = load_settings_raw()
+    data[UI_THEME_KEY] = t
+    _write_settings_raw(_config_path(), data)
+
+
+def load_default_autosave() -> tuple[bool, int]:
+    data = load_settings_raw()
+    enabled = data.get(DEFAULT_AUTOSAVE_ENABLED_KEY)
+    seconds = data.get(DEFAULT_AUTOSAVE_SECONDS_KEY)
+    if not isinstance(enabled, bool):
+        enabled = True
+    if not isinstance(seconds, int) or seconds < 2 or seconds > 600:
+        seconds = 10
+    return enabled, seconds
+
+
+def save_default_autosave(enabled: bool, seconds: int) -> None:
+    e = bool(enabled)
+    s = int(seconds)
+    if s < 2:
+        s = 2
+    if s > 600:
+        s = 600
+    data = load_settings_raw()
+    data[DEFAULT_AUTOSAVE_ENABLED_KEY] = e
+    data[DEFAULT_AUTOSAVE_SECONDS_KEY] = s
+    _write_settings_raw(_config_path(), data)
 
 
 def _write_settings_raw(path: Path, data: dict) -> None:

@@ -10,7 +10,8 @@ from pathlib import Path
 
 from platformdirs import user_data_dir
 
-from novelja.core.models import ChapterMeta, Project, now_iso
+from novelja.core.models import ChapterMeta, Project, ProjectSettings, now_iso
+from novelja.core.security import load_default_autosave
 
 
 DEFAULT_CHAPTER_TITLE = "第{n}章"
@@ -49,7 +50,12 @@ class ProjectStore:
         (folder / "versions" / "agent-runs").mkdir(parents=True)
         (folder / "cache").mkdir()
 
-        project = Project(id=project_id, title=title)
+        autosave_enabled, autosave_seconds = load_default_autosave()
+        project = Project(
+            id=project_id,
+            title=title,
+            settings=ProjectSettings(autosaveEnabled=autosave_enabled, autosaveSeconds=autosave_seconds),
+        )
         self._write_project(folder, project)
         return folder
 

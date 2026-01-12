@@ -1,16 +1,35 @@
 from __future__ import annotations
 
+from PySide6.QtCore import Qt
 from PySide6.QtGui import QColor, QFont, QPalette
 from PySide6.QtWidgets import QApplication
 
 
-def apply_theme(app: QApplication) -> None:
+def _detect_system_scheme(app: QApplication) -> str:
+    try:
+        scheme = app.styleHints().colorScheme()
+        if scheme == Qt.ColorScheme.Dark:
+            return "dark"
+        if scheme == Qt.ColorScheme.Light:
+            return "light"
+    except Exception:
+        pass
+    return "light"
+
+
+def apply_theme(app: QApplication, theme: str = "system") -> None:
     """
     Apply a clean, modern light theme.
     Notes:
     - We intentionally keep this lightweight (QPalette + QSS) for cross-platform stability.
     - Widgets can opt-in to variants via dynamic properties, e.g. button.setProperty("variant","primary").
     """
+
+    t = str(theme).strip().lower()
+    if t == "system":
+        t = _detect_system_scheme(app)
+    if t not in ("light", "dark"):
+        t = "light"
 
     # Typography
     font = QFont()
@@ -32,19 +51,36 @@ def apply_theme(app: QApplication) -> None:
 
     # Palette (base colors)
     palette = QPalette()
-    c_window = QColor("#F7F8FA")
-    c_base = QColor("#FFFFFF")
-    c_text = QColor("#111827")
-    c_muted = QColor("#6B7280")
-    c_border = QColor("#E5E7EB")
-    c_primary = QColor("#2563EB")
-    c_primary_hover = QColor("#1D4ED8")
-    c_primary_pressed = QColor("#1E40AF")
-    c_focus = QColor("#93C5FD")
+    if t == "dark":
+        c_window = QColor("#0B1220")
+        c_base = QColor("#0F172A")
+        c_text = QColor("#E5E7EB")
+        c_muted = QColor("#9CA3AF")
+        c_border = QColor("#1F2937")
+        c_primary = QColor("#60A5FA")
+        c_primary_hover = QColor("#3B82F6")
+        c_primary_pressed = QColor("#2563EB")
+        c_focus = QColor("#1D4ED8")
+        c_sel_bg = QColor("#1E3A8A")
+        c_hover_bg = QColor("#111827")
+        c_alt_bg = QColor("#0B1220")
+    else:
+        c_window = QColor("#F7F8FA")
+        c_base = QColor("#FFFFFF")
+        c_text = QColor("#111827")
+        c_muted = QColor("#6B7280")
+        c_border = QColor("#E5E7EB")
+        c_primary = QColor("#2563EB")
+        c_primary_hover = QColor("#1D4ED8")
+        c_primary_pressed = QColor("#1E40AF")
+        c_focus = QColor("#93C5FD")
+        c_sel_bg = c_primary
+        c_hover_bg = QColor("#F9FAFB")
+        c_alt_bg = QColor("#F3F4F6")
 
     palette.setColor(QPalette.Window, c_window)
     palette.setColor(QPalette.Base, c_base)
-    palette.setColor(QPalette.AlternateBase, QColor("#F3F4F6"))
+    palette.setColor(QPalette.AlternateBase, c_alt_bg)
     palette.setColor(QPalette.Text, c_text)
     palette.setColor(QPalette.WindowText, c_text)
     palette.setColor(QPalette.Button, c_base)
@@ -77,7 +113,7 @@ def apply_theme(app: QApplication) -> None:
             border-radius: 6px;
         }}
         QMenuBar::item:selected {{
-            background: #EFF6FF;
+            background: {c_hover_bg.name()};
         }}
 
         QMenu {{
@@ -90,7 +126,7 @@ def apply_theme(app: QApplication) -> None:
             border-radius: 6px;
         }}
         QMenu::item:selected {{
-            background: #EFF6FF;
+            background: {c_hover_bg.name()};
         }}
 
         QStatusBar {{
@@ -122,14 +158,14 @@ def apply_theme(app: QApplication) -> None:
             padding: 8px 12px;
         }}
         QPushButton:hover {{
-            background: #F9FAFB;
+            background: {c_hover_bg.name()};
         }}
         QPushButton:pressed {{
-            background: #F3F4F6;
+            background: {c_alt_bg.name()};
         }}
         QPushButton:disabled {{
             color: {c_muted.name()};
-            background: #F3F4F6;
+            background: {c_alt_bg.name()};
             border-color: {c_border.name()};
         }}
 
@@ -169,8 +205,8 @@ def apply_theme(app: QApplication) -> None:
             border-radius: 8px;
         }}
         QListWidget::item:selected {{
-            background: #EFF6FF;
-            border: 1px solid #BFDBFE;
+            background: {c_hover_bg.name()};
+            border: 1px solid {c_focus.name()};
         }}
 
         /* Tabs */
