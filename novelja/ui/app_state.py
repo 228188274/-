@@ -53,11 +53,14 @@ def get_app_state() -> AppState:
         # Fallback (shouldn't happen in real app runtime)
         return AppState()
 
-    state = app.property("novelja_app_state")
+    # IMPORTANT: Use a Python attribute to keep a strong reference.
+    # Qt dynamic properties may not retain a Python object strongly,
+    # which can lead to "Signal source has been deleted".
+    state = getattr(app, "_novelja_app_state", None)
     if isinstance(state, AppState):
         return state
 
     state = AppState()
-    app.setProperty("novelja_app_state", state)
+    setattr(app, "_novelja_app_state", state)
     return state
 
