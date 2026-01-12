@@ -11,6 +11,8 @@ from PySide6.QtWidgets import (
     QMessageBox,
 )
 
+from pathlib import Path
+
 from novelja.core.security import load_recent_projects
 from novelja.ui.tabs.create_tab import CreateTab
 from novelja.ui.tabs.api_keys_tab import ApiKeysTab
@@ -102,10 +104,19 @@ class MainWindow(QMainWindow):
             disabled.setEnabled(False)
             menu_recent.addAction(disabled)
             return
+        any_valid = False
         for p in items:
+            folder = Path(p)
+            if not (folder.exists() and (folder / "project.json").exists()):
+                continue
+            any_valid = True
             act = QAction(p, self)
             act.triggered.connect(lambda checked=False, path=p: self._open_recent(path))
             menu_recent.addAction(act)
+        if not any_valid:
+            disabled = QAction("（暂无可用项目）", self)
+            disabled.setEnabled(False)
+            menu_recent.addAction(disabled)
 
     def _open_recent(self, path: str) -> None:
         # Delegate to CreateTab: open project directory (no extra prompts)

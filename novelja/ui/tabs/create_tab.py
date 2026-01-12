@@ -21,6 +21,7 @@ from PySide6.QtWidgets import (
 
 from novelja.core.ai.client import ai_next_preview, ai_polish, ai_summarize, load_ai_context
 from novelja.core.import_export import export_chapters_to_markdown, read_text_file, split_book_to_chapters
+from novelja.core.security import load_recent_projects
 from novelja.core.storage import ProjectStore
 from novelja.ui.async_worker import BackgroundTask
 from novelja.ui.app_state import get_app_state
@@ -79,6 +80,13 @@ class CreateTab(QWidget):
         self.project_name = QLabel("当前作品：未打开")
         self.project_name.setWordWrap(True)
         left_layout.addWidget(self.project_name)
+
+        self.recent_label = QLabel("最近作品（双击打开）：")
+        self.recent_label.setStyleSheet("color: #666;")
+        left_layout.addWidget(self.recent_label)
+
+        self.recent_list = QListWidget()
+        left_layout.addWidget(self.recent_list)
 
         self.chapter_filter = QLineEdit()
         self.chapter_filter.setPlaceholderText("搜索章节（标题关键词）")
@@ -142,6 +150,9 @@ class CreateTab(QWidget):
         self.btn_backtrack.clicked.connect(self._backtrack)
 
         self._set_enabled(False)
+        self._refresh_recent_projects()
+        get_app_state().projectChanged.connect(lambda _: self._refresh_recent_projects())
+        self.recent_list.itemDoubleClicked.connect(self._open_recent_item)
 
     def _set_enabled(self, enabled: bool) -> None:
         self.btn_new_chapter.setEnabled(enabled)
@@ -157,6 +168,10 @@ class CreateTab(QWidget):
         self.btn_polish.setEnabled(editor_enabled)
         self.btn_backtrack.setEnabled(editor_enabled)
         self.next_preview.setEnabled(editor_enabled)
+
+        no_project = self.project_dir is None or self.project is None
+        self.recent_label.setVisible(no_project)
+        self.recent_list.setVisible(no_project)
 
     def _ensure_project_open(self) -> bool:
         if self.project_dir is None or self.project is None:
@@ -204,6 +219,24 @@ class CreateTab(QWidget):
         if self.chapter_list.count() > 0:
             self.chapter_list.setCurrentRow(0)
 
+    def _refresh_recent_projects(self) -> None:
+        # Only relevant when no project is open
+        if self.project_dir is not None and self.project is not None:
+            self.recent_list.clear()
+            return
+        self.recent_list.clear()
+        for p in load_recent_projects():
+            self.recent_list.addItem(p)
+        if self.recent_list.count() == 0:
+            self.recent_list.addItem("（暂无）")
+            self.recent_list.item(0).setFlags(Qt.NoItemFlags)
+
+    def _open_recent_item(self, item: QListWidgetItem) -> None:
+        path = (item.text() or "").strip()
+        if not path or path == "（暂无）":
+            return
+        self.open_project_path(path)
+
     def _load_project(self, folder: Path) -> None:
         self.project_dir = folder
         self.project = self.store.load_project(folder)
@@ -212,6 +245,7 @@ class CreateTab(QWidget):
         self._dirty = False
         self._set_enabled(True)
         get_app_state().set_current_project(folder, self.project)
+        self._refresh_recent_projects()
 
     def _refresh_chapter_list(self) -> None:
         if not self._ensure_project_open():

@@ -139,6 +139,58 @@ def _apply_with_paragraph_index(original: str, change: ChangeItem) -> ApplyResul
     return ApplyResult(False, original, f"不支持的改动类型：{change.kind}")
 
 
+def _apply_with_anchor_window(original: str, change: ChangeItem) -> ApplyResult | None:
+    """
+    If both beforeAnchor and afterAnchor exist and are uniquely found in the text,
+    use the window between them to disambiguate matches.
+    """
+    before_anchor = (change.locator.beforeAnchor or "").strip()
+    after_anchor = (change.locator.afterAnchor or "").strip()
+    if not before_anchor or not after_anchor:
+        return None
+
+    if original.count(before_anchor) != 1 or original.count(after_anchor) != 1:
+        return ApplyResult(False, original, "锚点不唯一/不存在，无法使用锚点窗口定位。")
+
+    a = original.find(before_anchor)
+    b = original.find(after_anchor)
+    if b <= a:
+        return ApplyResult(False, original, "锚点顺序异常（afterAnchor 在 beforeAnchor 之前）。")
+
+    win_start = a + len(before_anchor)
+    win_end = b
+    window = original[win_start:win_end]
+
+    before = (change.beforeText or "").strip()
+    after = (change.afterText or "").rstrip()
+
+    if change.kind in ("replace", "delete"):
+        if not before:
+            return ApplyResult(False, original, "缺少 beforeText，拒绝应用。")
+        if window.count(before) != 1:
+            return ApplyResult(False, original, "锚点窗口内匹配不唯一/不存在，拒绝应用。")
+        rel = window.find(before)
+        abs_start = win_start + rel
+        abs_end = abs_start + len(before)
+        if change.kind == "delete":
+            return ApplyResult(True, original[:abs_start] + original[abs_end:], "已在锚点窗口内删除。")
+        if not after:
+            return ApplyResult(False, original, "缺少 afterText，拒绝应用。")
+        return ApplyResult(True, original[:abs_start] + after + original[abs_end:], "已在锚点窗口内替换。")
+
+    if change.kind == "insert_before":
+        if not after:
+            return ApplyResult(False, original, "缺少 afterText，拒绝应用。")
+        return ApplyResult(True, original[:win_start] + "\n" + after + original[win_start:], "已在锚点窗口起点插入。")
+
+    if change.kind == "insert_after":
+        if not after:
+            return ApplyResult(False, original, "缺少 afterText，拒绝应用。")
+        return ApplyResult(True, original[:win_end] + after + "\n" + original[win_end:], "已在锚点窗口终点插入。")
+
+    return None
+
+
 def apply_change(original: str, change: ChangeItem) -> ApplyResult:
     """
     MVP安全策略：
@@ -148,6 +200,10 @@ def apply_change(original: str, change: ChangeItem) -> ApplyResult:
     by_para = _apply_with_paragraph_index(original, change)
     if by_para is not None:
         return by_para
+
+    by_window = _apply_with_anchor_window(original, change)
+    if by_window is not None:
+        return by_window
 
     text = original
     before = (change.beforeText or "").strip()
