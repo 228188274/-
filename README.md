@@ -16,12 +16,30 @@
 ## 本地运行（开发版）
 > 当前仓库提供 **Python + Qt（PySide6）** 的本地桌面应用实现（MVP持续完善中）。
 
+### Windows（推荐）
+PowerShell 运行（会自动创建虚拟环境并启动）：
+
+```powershell
+.\run_windows.ps1
+```
+
+### Linux/macOS
 ```bash
 pip3 install -r requirements.txt
 python3 -m novelja
 ```
 
 ## 打包（可分发）
+> 注意：**Windows 安装包需在 Windows 上构建**；Linux 包需在 Linux 上构建（PyInstaller 不能跨平台产出可执行文件）。
+
+### Windows 打包
+```powershell
+.\build_windows.ps1
+```
+
+产物：`dist\novelja\`，运行：`dist\novelja\novelja.exe`
+
+### Linux 打包
 > 生成可运行的本地桌面包（`dist/novelja/`）。
 
 ```bash
