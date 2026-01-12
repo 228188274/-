@@ -13,3 +13,18 @@
 - **提交后自动生成**：下一章节预告（可编辑保存）
 - **智能体模式**：全章节统筹优化 + 输出“改动记录清单”（逐条应用/撤销）
 
+## 本地运行（开发版）
+> 当前仓库提供 **Python + Qt（PySide6）** 的本地桌面应用实现（MVP持续完善中）。
+
+```bash
+pip3 install -r requirements.txt
+python3 -m novelja
+```
+
+### Linux 可能需要的系统依赖
+如果启动时报 Qt/EGL 相关动态库缺失，可安装：
+
+```bash
+sudo apt-get update && sudo apt-get install -y libegl1
+```
+

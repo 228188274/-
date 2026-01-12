@@ -1,0 +1,14 @@
+__pycache__/
+*.py[cod]
+*.so
+.Python
+build/
+dist/
+*.egg-info/
+.venv/
+venv/
+.mypy_cache/
+.pytest_cache/
+
+# App local data (optional default)
+.novelja/

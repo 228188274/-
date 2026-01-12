@@ -1,0 +1,4 @@
+"""
+Dialogs used by tabs.
+"""
+
